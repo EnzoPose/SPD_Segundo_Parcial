@@ -1,0 +1,136 @@
+#include <IRremote.h>
+#include <LiquidCrystal.h>
+#include <Servo.h>
+
+#define SENSOR_IR 11
+#define IR_BOTON 0
+#define SENSOR_TEMP A0
+#define SERVO_PIN 9
+#define LED_ROJO 8
+#define LED_VERDE 10
+#define TEMPERATURA_INCENDIO_INVIERNO 30
+#define TEMPERATURA_INCENDIO_PRIMAVERA 45
+#define TEMPERATURA_INCENDIO_VERANO 60
+#define TEMPERATURA_INCENDIO_OTONIO 35
+
+int comandoIngresado;
+int estacionActual = 0;
+float temperaturaActual = 0;
+int estadoAlarma = 0;
+int posicionServo = 0;
+
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+Servo myServo;
+IRrecv irReceiver(SENSOR_IR);
+
+void setup()
+{
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  myServo.attach(SERVO_PIN);
+  irReceiver.enableIRIn();
+  pinMode(LED_ROJO, OUTPUT);
+  pinMode(LED_VERDE, OUTPUT);
+}
+
+void loop()
+{
+  if (irReceiver.decode())
+  {
+    comandoIngresado = irReceiver.decodedIRData.command;
+    irReceiver.resume();
+    switch (comandoIngresado)
+    {
+      case IR_BOTON:
+        estacionActual = (estacionActual + 1) % 4;
+        break;
+    }
+  }
+
+  temperaturaActual = map(analogRead(SENSOR_TEMP), 20, 350, -40, 125);
+
+  lcd.setCursor(0, 0);
+  switch (estacionActual)
+  {
+    case 0:
+      lcd.print("Invierno   ");
+      if (temperaturaActual >= TEMPERATURA_INCENDIO_INVIERNO)
+      {
+        activarModoAlarma();
+      }
+      else
+      {
+        apagarModoAlarma();
+      }
+      break;
+
+    case 1:
+      lcd.print("Primavera  ");
+      if (temperaturaActual >= TEMPERATURA_INCENDIO_PRIMAVERA)
+      {
+        activarModoAlarma();
+      }
+      else
+      {
+        apagarModoAlarma();
+      }
+      break;
+
+    case 2:
+      lcd.print("Verano     ");
+      if (temperaturaActual >= TEMPERATURA_INCENDIO_VERANO)
+      {
+        activarModoAlarma();
+      }
+      else
+      {
+        apagarModoAlarma();
+      }
+      break;
+
+    case 3:
+      lcd.print("Otonio      ");
+      if (temperaturaActual >= TEMPERATURA_INCENDIO_OTONIO)
+      {
+        activarModoAlarma();
+      }
+      else
+      {
+        apagarModoAlarma();
+      }
+      break;
+  }
+
+  lcd.print(temperaturaActual, 1);
+  lcd.print("C  ");
+
+  if (estadoAlarma)
+  {
+    lcd.setCursor(0, 1);
+    lcd.print("¡ALERTA INCENDIO!");
+  }
+  else
+  {
+    lcd.setCursor(0, 1);
+    lcd.print("                 ");
+  }
+
+  delay(500);
+  lcd.clear();
+}
+
+void activarModoAlarma()
+{
+  estadoAlarma = 1;
+  digitalWrite(LED_ROJO, HIGH);
+  digitalWrite(LED_VERDE, LOW);
+  myServo.write(180);
+}
+
+void apagarModoAlarma()
+{
+  estadoAlarma = 0;
+  digitalWrite(LED_ROJO, LOW);
+  digitalWrite(LED_VERDE, HIGH);
+  myServo.write(0);
+}
